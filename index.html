@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Fundamentals: Warm Up & Sequences</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Custom styles for the terminal theme */
+        :root {
+            --terminal-bg: #1e1e1e;
+            --terminal-text: #00ff00;
+            --terminal-accent: #00cc00;
+            --terminal-error: #ff5555;
+            --terminal-info: #55aaff;
+        }
+
+        body {
+            font-family: 'Consolas', 'Courier New', monospace;
+            background-color: #0d0d0d;
+            color: var(--terminal-text);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+
+        .terminal-container {
+            width: 100%;
+            max-width: 900px;
+            background-color: var(--terminal-bg);
+            box-shadow: 0 0 20px var(--terminal-accent);
+            border: 2px solid var(--terminal-accent);
+        }
+
+        .terminal-header {
+            background-color: #000;
+            color: #fff;
+            padding: 0.5rem 1rem;
+            border-bottom: 2px solid var(--terminal-accent);
+        }
+
+        .code-input {
+            background-color: #2c2c2c;
+            color: var(--terminal-text);
+            border: 1px solid var(--terminal-accent);
+            transition: all 0.2s;
+        }
+
+        .code-input:focus {
+            outline: none;
+            box-shadow: 0 0 5px var(--terminal-accent);
+        }
+
+        .draggable-item {
+            cursor: grab;
+            border: 1px solid var(--terminal-accent);
+            background-color: #333;
+            color: var(--terminal-text);
+            transition: all 0.2s;
+        }
+
+        .draggable-item:active {
+            cursor: grabbing;
+            box-shadow: 0 0 10px var(--terminal-text);
+        }
+
+        .drop-target {
+            min-height: 48px;
+            border: 2px dashed var(--terminal-accent);
+            background-color: #222;
+        }
+
+        .correct {
+            border-color: #00cc00 !important;
+            box-shadow: 0 0 10px #00cc00;
+        }
+        .incorrect {
+            border-color: var(--terminal-error) !important;
+            box-shadow: 0 0 10px var(--terminal-error);
+        }
+
+        /* Utility for glowing text/borders */
+        .glow-text {
+            text-shadow: 0 0 5px var(--terminal-text);
+        }
+        .glow-border {
+            box-shadow: 0 0 8px var(--terminal-accent);
+        }
+        
+    </style>
+</head>
+<body>
+
+<div id="game-container" class="terminal-container rounded-lg overflow-hidden">
+    <div class="terminal-header flex justify-between items-center text-sm">
+        <span class="font-bold">[[ SYSTEM_ACCESS: PYTHON FUNDAMENTALS ]]</span>
+        <span id="score-display" class="glow-text text-lg">SCORE: 0</span>
+    </div>
+
+    <div class="p-6 space-y-6">
+        <!-- Progress Bar & Indicator -->
+        <div class="flex items-center text-xs">
+            <div id="progress-bar-container" class="flex-grow h-2 bg-gray-700 rounded-full mr-4">
+                <div id="progress-bar" class="h-2 bg-green-500 rounded-full transition-all duration-500"></div>
+            </div>
+            <span id="progress-text" class="text-green-400">Loading Module...</span>
+        </div>
+
+        <!-- Lesson Introduction/Recap Area -->
+        <div id="recap-section" class="bg-gray-800 p-4 rounded-lg border-l-4 border-yellow-500 hidden">
+            <h2 id="recap-title" class="text-xl font-bold text-yellow-300 mb-2"></h2>
+            <p id="recap-content" class="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed"></p>
+            <button id="start-level-btn" onclick="startLevel()" class="mt-4 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-500 transition-colors">
+                Start Level <i class="fas fa-play ml-2"></i>
+            </button>
+        </div>
+
+        <!-- Question Area -->
+        <div id="question-area" class="space-y-4 hidden">
+            <div class="flex justify-between items-start border-b border-gray-700 pb-2">
+                <h3 id="question-title" class="text-xl font-bold text-green-400"></h3>
+                <span id="attainment-tag" class="text-xs font-semibold px-2 py-1 rounded-full border border-gray-600"></span>
+            </div>
+            
+            <pre id="question-code-snippet" class="bg-black p-4 rounded-lg overflow-x-auto text-sm text-yellow-300"></pre>
+            
+            <div id="task-renderer" class="bg-gray-900 p-4 rounded-lg min-h-[150px]">
+                <!-- Task-specific content renders here (MCQ, Code Input, Drag/Drop) -->
+            </div>
+
+            <button id="submit-btn" onclick="handleSubmit()" class="w-full px-6 py-3 bg-cyan-700 text-white rounded-md hover:bg-cyan-600 transition-colors font-bold glow-border">
+                [SUBMIT SOLUTION]
+            </button>
+        </div>
+        
+        <!-- Game Over Message -->
+        <div id="game-over-area" class="text-center p-8 hidden">
+            <h2 class="text-4xl font-extrabold text-green-400 glow-text mb-4">TRAINING COMPLETE</h2>
+            <p class="text-xl mb-6">Final Score: <span id="final-score" class="font-bold text-yellow-300"></span></p>
+            <p class="text-gray-400">All modules (Warm up, Playlist, While Loops) executed successfully.</p>
+            <p class="text-gray-500 text-sm mt-4">System shutting down...</p>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Feedback/Error Messages -->
+<div id="feedback-modal" class="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center hidden">
+    <div class="bg-gray-800 p-6 rounded-lg max-w-md w-full border-2" id="modal-content-card">
+        <h3 id="modal-title" class="text-2xl font-bold mb-3"></h3>
+        <p id="modal-message" class="mb-4 text-sm whitespace-pre-wrap"></p>
+        <p id="modal-mini-lesson" class="text-xs italic p-3 bg-gray-900 rounded-md mb-4 text-green-300 border-l-4 border-green-500 hidden"></p>
+        <button id="modal-close-btn" onclick="closeModal()" class="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-500 transition-colors font-semibold">
+            <span id="modal-btn-text">Proceed</span> <i class="fas fa-arrow-right ml-2"></i>
+        </button>
+    </div>
+</div>
+
+<script>
+    // --------------------------------------------------------------------------------
+    // 1. DYNAMIC CONTENT & ATTAINMENT FOCUS
+    // --------------------------------------------------------------------------------
+    const LESSON_DATA = [
+        // --- LEVEL 1: WARM UP (Basics, Selection, Syntax) ---
+        {
+            level: 1,
+            title: "Module 1: Warm Up & Basics",
+            recap: `OBJECTIVES:
+1. Reconnect with Python: Displaying messages and receiving input.
+2. Use selection (if-elif-else) to control program flow.
+3. Locate and correct common syntax errors.
+
+Key Concepts:
+- print("text") to display.
+- input() to read from keyboard.
+- Indentation is critical for 'if' statements.`,
+            questions: [
+                {
+                    id: "L1Q1",
+                    attainment: "Low",
+                    mpa: 100,
+                    type: "MCQ",
+                    prompt: "Which function is used to read data FROM the keyboard?",
+                    code: "# We need to ask the user for their name",
+                    options: [
+                        { text: "print()", isCorrect: false },
+                        { text: "input()", isCorrect: true },
+                        { text: "read()", isCorrect: false },
+                        { text: "type()", isCorrect: false }
+                    ],
+                    feedback_incorrect: "print() puts data onto the screen. To get data IN, we use input().",
+                    mini_lesson: "Mini-Lesson: Use `input()` to capture what the user types."
+                },
+                {
+                    id: "L1Q2",
+                    attainment: "Medium",
+                    mpa: 150,
+                    type: "MCQ",
+                    prompt: "What is the output of the following arithmetic expression?",
+                    code: "result = 5 + 2 * 3\nprint(result)",
+                    options: [
+                        { text: "21", isCorrect: false },
+                        { text: "11", isCorrect: true },
+                        { text: "10", isCorrect: false },
+                        { text: "7", isCorrect: false }
+                    ],
+                    feedback_incorrect: "Remember Operator Precedence (BIDMAS/BODMAS). Multiplication (*) happens before Addition (+).",
+                    mini_lesson: "Mini-Lesson: 2 * 3 = 6. Then 5 + 6 = 11."
+                },
+                {
+                    id: "L1Q3",
+                    attainment: "Medium",
+                    mpa: 150,
+                    type: "CODE_INPUT",
+                    prompt: "Fix the syntax error in the 'if' statement (punctuation is missing).",
+                    code: `
+score = 10
+if score > 5   # SYNTAX ERROR HERE
+    print("Winner")
+                    `,
+                    answer: "if score > 5:",
+                    feedback_incorrect: "In Python, compound statements like 'if', 'else', and 'while' must end with a colon (:).",
+                    mini_lesson: "Mini-Lesson: Always end the 'if' condition line with a `:`."
+                },
+                {
+                    id: "L1Q4",
+                    attainment: "High",
+                    mpa: 200,
+                    type: "DRAG_DROP_ORDER",
+                    prompt: "Arrage the lines to create a program that asks for age and checks if you are an adult (18+).",
+                    code: "# Construct the logic flow",
+                    answer_order: ["dd1_input", "dd1_if", "dd1_print"],
+                    items: [
+                        { id: "dd1_if", text: "if age >= 18:" },
+                        { id: "dd1_print", text: "    print('Adult')" },
+                        { id: "dd1_input", text: "age = int(input('Age: '))" }
+                    ],
+                    feedback_incorrect: "You must get the Input first, then Check the condition, then Print the result.",
+                    mini_lesson: "Mini-Lesson: Input -> Process (If) -> Output."
+                }
+            ]
+        },
+        
+        // --- LEVEL 2: PLAYLIST (List Operations) ---
+        {
+            level: 2,
+            title: "Module 2: Playlist (Lists)",
+            recap: `OBJECTIVES:
+1. Create lists and access individual items.
+2. Perform operations: adding, removing, or locating items.
+
+Key Concepts:
+- Lists are defined with square brackets [ ].
+- Indexing starts at 0.
+- Use .append() to add items.`,
+            questions: [
+                {
+                    id: "L2Q1",
+                    attainment: "Low",
+                    mpa: 100,
+                    type: "MCQ",
+                    prompt: "Which symbol is used to define a List in Python?",
+                    code: "my_list = ?",
+                    options: [
+                        { text: "{ } (Curly Braces)", isCorrect: false },
+                        { text: "( ) (Parentheses)", isCorrect: false },
+                        { text: "[ ] (Square Brackets)", isCorrect: true },
+                        { text: "< > (Angle Brackets)", isCorrect: false }
+                    ],
+                    feedback_incorrect: "Parentheses are for Tuples, Curly braces for Dictionaries. Lists use Square Brackets.",
+                    mini_lesson: "Mini-Lesson: `my_list = [1, 2, 3]`"
+                },
+                {
+                    id: "L2Q2",
+                    attainment: "Medium",
+                    mpa: 150,
+                    type: "CODE_INPUT",
+                    prompt: "Write the code to print the *first* item in this list.",
+                    code: `
+colors = ["Red", "Green", "Blue"]
+# Print the first item ("Red")
+print(colors[]) 
+                    `,
+                    answer: "print(colors[0])",
+                    feedback_incorrect: "Python is 0-indexed. The first item is at index 0, not 1.",
+                    mini_lesson: "Mini-Lesson: `list[0]` accesses the first element."
+                },
+                {
+                    id: "L2Q3",
+                    attainment: "Medium",
+                    mpa: 150,
+                    type: "MCQ",
+                    prompt: "Which method adds a new item to the END of a list?",
+                    code: "playlist = ['Song A', 'Song B']",
+                    options: [
+                        { text: ".push()", isCorrect: false },
+                        { text: ".add()", isCorrect: false },
+                        { text: ".append()", isCorrect: true },
+                        { text: ".insert()", isCorrect: false }
+                    ],
+                    feedback_incorrect: ".add() is for sets. .insert() requires an index. .append() adds to the end.",
+                    mini_lesson: "Mini-Lesson: `list.append(item)` adds to the end."
+                }
+            ]
+        },
+
+        // --- LEVEL 3: IN A WHILE (Iteration) ---
+        {
+            level: 3,
+            title: "Module 3: In a while... (Iteration)",
+            recap: `OBJECTIVES:
+1. Use iteration (while loops) to control execution flow.
+2. Combine list operations with loops.
+
+Key Concepts:
+- 'while' loops run AS LONG AS a condition is true.
+- Be careful of infinite loops (ensure the condition eventually becomes false).`,
+            questions: [
+                {
+                    id: "L3Q1",
+                    attainment: "Low",
+                    mpa: 100,
+                    type: "MCQ",
+                    prompt: "Which keyword creates a loop that runs based on a condition?",
+                    code: "# Loop until x is 5",
+                    options: [
+                        { text: "for", isCorrect: false },
+                        { text: "loop", isCorrect: false },
+                        { text: "if", isCorrect: false },
+                        { text: "while", isCorrect: true }
+                    ],
+                    feedback_incorrect: "'for' loops count. 'if' checks once. 'while' checks repeatedly.",
+                    mini_lesson: "Mini-Lesson: `while condition:` runs the block repeatedly."
+                },
+                {
+                    id: "L3Q2",
+                    attainment: "High",
+                    mpa: 200,
+                    type: "CODE_INPUT",
+                    prompt: "Fix the Infinite Loop. The variable 'count' never changes!",
+                    code: `
+count = 0
+while count < 5:
+    print(count)
+    # ADD LINE TO INCREMENT COUNT BY 1
+                    `,
+                    answer: "count = count + 1",
+                    feedback_incorrect: "You need to add 1 to count (`count = count + 1` or `count += 1`) so it eventually reaches 5.",
+                    mini_lesson: "Mini-Lesson: Without incrementing, `count < 5` is always True -> Infinite Loop."
+                },
+                {
+                    id: "L3Q3",
+                    attainment: "High",
+                    mpa: 200,
+                    type: "DRAG_DROP_ORDER",
+                    prompt: "Order the lines to print items from a list using a while loop index.",
+                    code: "items = ['a', 'b', 'c']",
+                    answer_order: ["dd3_init", "dd3_while", "dd3_print", "dd3_inc"],
+                    items: [
+                        { id: "dd3_while", text: "while i < len(items):" },
+                        { id: "dd3_inc", text: "    i = i + 1" },
+                        { id: "dd3_init", text: "i = 0" },
+                        { id: "dd3_print", text: "    print(items[i])" }
+                    ],
+                    feedback_incorrect: "Initialize index -> Check length condition -> Print item -> Increment index.",
+                    mini_lesson: "Mini-Lesson: 1. Start at 0. 2. Loop while i < length. 3. Do action. 4. Next i."
+                }
+            ]
+        }
+    ];
+
+    // --------------------------------------------------------------------------------
+    // 2. GLOBAL STATE
+    // --------------------------------------------------------------------------------
+    let currentLevelIndex = 0;
+    let currentQuestionIndex = -1; 
+    let totalScore = 0;
+    let currentQuestion = null;
+    let currentMPA = 0; 
+    let attempts = 0; 
+
+    // --------------------------------------------------------------------------------
+    // 3. CORE UI ELEMENTS
+    // --------------------------------------------------------------------------------
+    const els = {
+        scoreDisplay: document.getElementById('score-display'),
+        progressBar: document.getElementById('progress-bar'),
+        progressText: document.getElementById('progress-text'),
+        recapSection: document.getElementById('recap-section'),
+        recapTitle: document.getElementById('recap-title'),
+        recapContent: document.getElementById('recap-content'),
+        questionArea: document.getElementById('question-area'),
+        questionTitle: document.getElementById('question-title'),
+        attainmentTag: document.getElementById('attainment-tag'),
+        questionCodeSnippet: document.getElementById('question-code-snippet'),
+        taskRenderer: document.getElementById('task-renderer'),
+        submitBtn: document.getElementById('submit-btn'),
+        feedbackModal: document.getElementById('feedback-modal'),
+        modalTitle: document.getElementById('modal-title'),
+        modalMessage: document.getElementById('modal-message'),
+        modalCard: document.getElementById('modal-content-card'),
+        modalMiniLesson: document.getElementById('modal-mini-lesson'),
+        modalBtnText: document.getElementById('modal-btn-text'),
+        modalCloseBtn: document.getElementById('modal-close-btn'), 
+        gameOverArea: document.getElementById('game-over-area'),
+        finalScore: document.getElementById('final-score')
+    };
+
+    // --------------------------------------------------------------------------------
+    // 4. NAVIGATION & LIFE CYCLE
+    // --------------------------------------------------------------------------------
+
+    function initializeGame() {
+        currentLevelIndex = 0;
+        totalScore = 0;
+        updateScoreDisplay();
+        showRecapScreen();
+    }
+
+    function showRecapScreen() {
+        const levelData = LESSON_DATA[currentLevelIndex];
+        if (!levelData) {
+            return showGameOverScreen();
+        }
+
+        els.questionArea.classList.add('hidden');
+        els.recapSection.classList.remove('hidden');
+
+        els.recapTitle.textContent = levelData.title;
+        els.recapContent.textContent = levelData.recap.trim();
+        
+        currentQuestionIndex = -1;
+        updateProgressDisplay();
+    }
+
+    function startLevel() {
+        els.recapSection.classList.add('hidden');
+        currentQuestionIndex = 0;
+        loadQuestion(currentQuestionIndex);
+    }
+
+    function loadQuestion(index) {
+        const levelData = LESSON_DATA[currentLevelIndex];
+        if (!levelData || index >= levelData.questions.length) {
+            currentLevelIndex++;
+            return showRecapScreen();
+        }
+
+        currentQuestion = levelData.questions[index];
+        currentMPA = currentQuestion.mpa;
+        attempts = 0;
+        currentQuestionIndex = index;
+        
+        // UI updates
+        els.questionArea.classList.remove('hidden');
+        els.questionTitle.textContent = `Q${index + 1}. ${currentQuestion.prompt}`;
+        els.attainmentTag.textContent = currentQuestion.attainment.toUpperCase();
+        els.attainmentTag.className = 'text-xs font-semibold px-2 py-1 rounded-full border border-gray-600';
+        
+        if (currentQuestion.attainment === 'Low') {
+            els.attainmentTag.classList.add('text-green-300', 'border-green-700');
+        } else if (currentQuestion.attainment === 'Medium') {
+            els.attainmentTag.classList.add('text-yellow-300', 'border-yellow-700');
+        } else if (currentQuestion.attainment === 'High') {
+            els.attainmentTag.classList.add('text-red-300', 'border-red-700');
+        }
+
+        els.questionCodeSnippet.textContent = currentQuestion.code.trim();
+        els.submitBtn.disabled = false;
+        els.submitBtn.textContent = '[SUBMIT SOLUTION]';
+
+        renderTask(currentQuestion);
+        updateProgressDisplay();
+    }
+
+    function showGameOverScreen() {
+        els.questionArea.classList.add('hidden');
+        els.recapSection.classList.add('hidden');
+        els.gameOverArea.classList.remove('hidden');
+        els.finalScore.textContent = totalScore;
+    }
+
+    function updateScoreDisplay() {
+        els.scoreDisplay.textContent = `SCORE: ${totalScore}`;
+    }
+
+    function updateProgressDisplay() {
+        const levelData = LESSON_DATA[currentLevelIndex];
+        if (!levelData) return;
+
+        const totalQs = levelData.questions.length;
+        const completedQs = currentQuestionIndex > -1 ? currentQuestionIndex : 0;
+        
+        els.progressText.textContent = `${levelData.title}: ${completedQs}/${totalQs} Completed`;
+        
+        const progressPercentage = (completedQs / totalQs) * 100;
+        els.progressBar.style.width = `${progressPercentage}%`;
+    }
+
+    function applyPenalty() {
+        const penaltyAmount = currentQuestion.mpa * 0.25; 
+        const oldMPA = currentMPA;
+        currentMPA -= penaltyAmount;
+        currentMPA = Math.max(0, currentMPA); 
+
+        const msg = `
+        [[ ALERT: INCORRECT ATTEMPT ]]
+        Penalty Applied: ${Math.round(penaltyAmount)} pts deducted from Max Potential Award.
+        MPA reduced from ${oldMPA} to ${currentMPA}.
+        `;
+        showModal("Execution Error", msg, 'error');
+    }
+
+    function awardAndProceed(isCorrect) {
+        const scoreAwarded = isCorrect ? Math.round(currentMPA) : 0;
+        totalScore += scoreAwarded;
+        updateScoreDisplay();
+
+        let title, message, type, miniLesson = '';
+
+        if (isCorrect) {
+            title = "[[ SUCCESS: CODE ACCEPTED ]]";
+            type = 'success';
+            message = `
+            Solution validated.
+            Score Awarded: +${scoreAwarded} points.
+            `;
+            if (currentQuestion.type === 'CODE_INPUT') {
+                message += `\nCorrect Code:\n${currentQuestion.answer}`;
+            }
+            if (currentQuestion.type === 'DRAG_DROP_ORDER') {
+                const solutionText = currentQuestion.answer_order.map(id => {
+                    return currentQuestion.items.find(item => item.id === id).text;
+                }).join('\n');
+                message += `\nCorrect Sequence:\n${solutionText}`;
+            }
+
+        } else {
+            title = "[[ FAILED: NO POINTS AWARDED ]]";
+            type = 'error';
+            message = `
+            The attempt was incorrect.
+            Score Awarded: 0 points.
+            `;
+            message += `\nReason: ${currentQuestion.feedback_incorrect}`;
+            miniLesson = currentQuestion.mini_lesson;
+        }
+
+        showModal(title, message, type, miniLesson);
+
+        document.getElementById('modal-close-btn').onclick = () => {
+            closeModal();
+            loadQuestion(currentQuestionIndex + 1);
+        };
+    }
+
+    // --------------------------------------------------------------------------------
+    // 6. TASK RENDERING & VALIDATION
+    // --------------------------------------------------------------------------------
+
+    function renderTask(q) {
+        els.taskRenderer.innerHTML = '';
+        const id = q.id;
+
+        if (q.type === "MCQ") {
+            q.options.forEach((option, i) => {
+                const button = document.createElement('button');
+                button.className = `mcq-option w-full text-left p-3 my-2 rounded-md hover:bg-gray-700 transition-colors border border-gray-600`;
+                button.setAttribute('data-index', i);
+                button.textContent = option.text;
+                button.onclick = () => {
+                    document.querySelectorAll('.mcq-option').forEach(btn => btn.classList.remove('bg-gray-600', 'border-cyan-500'));
+                    button.classList.add('bg-gray-600', 'border-cyan-500');
+                };
+                els.taskRenderer.appendChild(button);
+            });
+        }
+        else if (q.type === "CODE_INPUT") {
+            const textarea = document.createElement('textarea');
+            textarea.id = `${id}-input`;
+            textarea.className = 'code-input w-full h-32 p-3 text-sm rounded-md resize-none';
+            textarea.placeholder = '# Enter your corrected code or value here...';
+            els.taskRenderer.appendChild(textarea);
+        }
+        else if (q.type === "DRAG_DROP_ORDER") {
+            const sourceContainer = document.createElement('div');
+            sourceContainer.id = `${id}-source`;
+            sourceContainer.className = 'flex flex-wrap gap-3 p-3 bg-gray-700 rounded-md';
+            
+            const targetContainer = document.createElement('div');
+            targetContainer.id = `${id}-target`;
+            targetContainer.className = 'space-y-2 mt-4';
+
+            const shuffledItems = shuffleArray([...q.items]);
+
+            shuffledItems.forEach(item => {
+                const dragItem = document.createElement('div');
+                dragItem.id = item.id;
+                dragItem.className = 'draggable-item p-3 rounded-md shadow-lg';
+                dragItem.textContent = item.text;
+                dragItem.draggable = true;
+                dragItem.addEventListener('dragstart', handleDragStart);
+                sourceContainer.appendChild(dragItem);
+            });
+
+            for (let i = 0; i < q.items.length; i++) {
+                const target = document.createElement('div');
+                target.className = 'drop-target p-2 rounded-md border-2 border-dashed border-gray-600 flex items-center';
+                target.setAttribute('data-order', i);
+                target.innerHTML = `<span class="mr-3 font-bold text-gray-500">${i + 1}.</span>`;
+                target.addEventListener('dragover', handleDragOver);
+                target.addEventListener('drop', handleDrop);
+                targetContainer.appendChild(target);
+            }
+
+            els.taskRenderer.appendChild(sourceContainer);
+            els.taskRenderer.appendChild(targetContainer);
+        }
+    }
+
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    function handleSubmit() {
+        if (attempts > 0) return; 
+
+        const input = getTaskInput(currentQuestion);
+
+        if (input.isEmpty) {
+            return showModal("Input Required", "[[ WARNING: NO INPUT PROVIDED ]]\nPlease enter your answer or make a selection before submitting.", 'info');
+        }
+
+        attempts++;
+        
+        let isCorrect = false;
+        try {
+            isCorrect = validateAnswer(currentQuestion, input.value);
+        } catch (e) {
+            console.error("Validation Error:", e);
+            isCorrect = false;
+        }
+
+        if (isCorrect) {
+            awardAndProceed(true);
+        } else {
+            applyPenalty();
+            awardAndProceed(false);
+        }
+    }
+
+    function getTaskInput(q) {
+        const id = q.id;
+        
+        if (q.type === "MCQ") {
+            const selectedBtn = document.querySelector('.mcq-option.bg-gray-600');
+            const index = selectedBtn ? parseInt(selectedBtn.getAttribute('data-index')) : null;
+            return { isEmpty: index === null, value: index };
+        }
+        else if (q.type === "CODE_INPUT") {
+            const textarea = document.getElementById(`${id}-input`);
+            const value = textarea ? textarea.value.trim() : '';
+            return { isEmpty: value === '', value: value };
+        }
+        else if (q.type === "DRAG_DROP_ORDER") {
+            const targetContainer = document.getElementById(`${id}-target`);
+            const droppedItems = Array.from(targetContainer.children)
+                .map(target => target.querySelector('.draggable-item')?.id)
+                .filter(id => id); 
+            
+            return { isEmpty: droppedItems.length !== q.items.length, value: droppedItems };
+        }
+
+        return { isEmpty: true, value: null };
+    }
+
+    function validateAnswer(q, input) {
+        if (q.type === "MCQ") {
+            return q.options[input].isCorrect;
+        }
+        else if (q.type === "CODE_INPUT") {
+            const normalizedInput = input.toLowerCase().replace(/\s/g, '');
+            const normalizedAnswer = q.answer.toLowerCase().replace(/\s/g, '');
+            // Also allow simpler check for "count+=1" variation if strictly defined
+            if (q.id === "L3Q2" && normalizedInput === "count+=1") return true; 
+            return normalizedInput === normalizedAnswer;
+        }
+        else if (q.type === "DRAG_DROP_ORDER") {
+            if (!Array.isArray(input) || input.length !== q.answer_order.length) return false;
+            return input.every((id, i) => id === q.answer_order[i]);
+        }
+        
+        return false;
+    }
+
+    // --------------------------------------------------------------------------------
+    // 7. DRAG AND DROP HANDLERS
+    // --------------------------------------------------------------------------------
+    let draggedItem = null;
+
+    function handleDragStart(e) {
+        draggedItem = e.target;
+        e.dataTransfer.setData('text/plain', e.target.id);
+        setTimeout(() => e.target.classList.add('opacity-50'), 0);
+    }
+
+    function handleDragOver(e) {
+        e.preventDefault(); 
+        e.target.closest('.drop-target').classList.add('bg-gray-600');
+    }
+
+    function handleDrop(e) {
+        e.preventDefault();
+        const target = e.target.closest('.drop-target');
+        const data = e.dataTransfer.getData('text/plain');
+        const item = document.getElementById(data);
+        
+        if (target && item) {
+            const existingItem = target.querySelector('.draggable-item');
+            if (existingItem) {
+                document.getElementById(`${currentQuestion.id}-source`).appendChild(existingItem);
+                existingItem.classList.remove('opacity-50');
+            }
+            target.appendChild(item);
+            item.classList.remove('opacity-50');
+        }
+        target.classList.remove('bg-gray-600');
+    }
+
+    // --------------------------------------------------------------------------------
+    // 8. MODAL/FEEDBACK SYSTEM
+    // --------------------------------------------------------------------------------
+
+    function showModal(title, message, type = 'info', miniLesson = '') {
+        els.modalTitle.textContent = title;
+        els.modalMessage.textContent = message;
+        els.modalMiniLesson.textContent = miniLesson;
+        
+        els.modalCard.className = 'bg-gray-800 p-6 rounded-lg max-w-md w-full border-2';
+        els.modalCloseBtn.className = 'w-full px-4 py-2 text-white rounded-md transition-colors font-semibold';
+        els.modalMiniLesson.classList.add('hidden');
+        els.modalMiniLesson.classList.remove('border-red-500', 'border-green-500');
+
+        if (type === 'success') {
+            els.modalCard.classList.add('border-green-500', 'glow-border');
+            els.modalCloseBtn.classList.add('bg-green-600', 'hover:bg-green-500');
+            els.modalBtnText.textContent = 'Next Challenge'; 
+        } else if (type === 'error') {
+            els.modalCard.classList.add('border-red-500', 'glow-border');
+            els.modalCloseBtn.classList.add('bg-red-600', 'hover:bg-red-500');
+            els.modalBtnText.textContent = 'Next Challenge'; 
+            if (miniLesson) {
+                els.modalMiniLesson.classList.remove('hidden');
+                els.modalMiniLesson.classList.add('border-red-500', 'text-red-300');
+            }
+        } else { 
+            els.modalCard.classList.add('border-cyan-500');
+            els.modalCloseBtn.classList.add('bg-cyan-600', 'hover:bg-cyan-500');
+            els.modalBtnText.textContent = 'Acknowledge';
+            document.getElementById('modal-close-btn').onclick = closeModal;
+        }
+
+        els.feedbackModal.classList.remove('hidden');
+    }
+
+    function closeModal() {
+        els.feedbackModal.classList.add('hidden');
+    }
+
+    window.onload = initializeGame;
+
+</script>
+</body>
+</html>
